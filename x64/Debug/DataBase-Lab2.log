@@ -1,0 +1,4 @@
+﻿  DataBase-Lab2.cpp
+D:\visual studio code\DataBase-Lab2\DataBase-Lab2\record.h(18,15): warning C4244: “参数”: 从“time_t”转换到“unsigned int”，可能丢失数据
+D:\visual studio code\DataBase-Lab2\DataBase-Lab2\mergesort.h(162,47): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+  DataBase-Lab2.vcxproj -> D:\visual studio code\DataBase-Lab2\x64\Debug\DataBase-Lab2.exe
