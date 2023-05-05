@@ -13,14 +13,14 @@
 #include <iomanip>
 #include <queue>
 #include <vector>
-#define WAYS_NUM 18          // 定义归并排序的路数
+#define WAYS_NUM 20          // 定义归并排序的路数
 const char *path_input = "input_records.bin";  // 待排序文件名
 const char *path_output = "ouput_records.bin"; // 已排序文件名
 FILE *subinput_fp[WAYS_NUM];  // 有序子文件指针
 int recordNums[WAYS_NUM];     // 每个子集中存储的记录数
-#define RECORDS_TOTAL_NUM 12345   // 定义记录总数
+#define RECORDS_TOTAL_NUM 20000   // 定义记录总数
 #define A_MAX 30000     // 定义记录中A属性的最大值
-#define BUFFER_TOTAL_SIZE 700      // 定义总缓冲区大小
+#define BUFFER_TOTAL_SIZE 1000      // 定义总缓冲区大小
 #define SUB_BUF_SIZE 20      // 有序子集合子缓冲区大小
 #define OUTPUT_BUF_SIZE 200  // 输出缓冲区大小
 using namespace std;
@@ -152,18 +152,19 @@ void secondRun() {
 
     // 二路归并排序
     while (true) {
-        //这里是未优化版本
+        //------未优化版本----------
+
         int minValue_index = getMinNotOptimized(buffer_sorting, WAYS_NUM, A_MAX); // 当前最小元素所在的子集
 
-//        //这里是败者树优化版本
+//----------败者树优化版本-----------
 //        LoserTree tree;
 //        InitialTree(tree,buffer_sorting);
 //        int minValue_index = getMinByLoserTree(tree); // 当前最小元素所在的子集
 
-        //这里是最小堆优化版本
+//------------最小堆优化版本-----
 //        priority_queue<int> min_heap;
 //        int minValue_index = getMinByHeap(min_heap); // 当前最小元素所在的子集
-
+//-----------------------------------
         // 如果所有排序结束
         if (minValue_index == -1) {
             printf("所有的records完成归并!\n");
@@ -223,7 +224,6 @@ void secondRun() {
             // 如果所有子集都已经比较完，但是输出缓冲区未满，则也得把最后剩余的量输出到外存
             if (flag == 0) {
                 fwrite(buffer_output, sizeof(Record), outputNum, fw);
-                //printf("writeCount:%d   writeNums:%d  \n", writeCount + 1, outputNum);
                 outputNum = 0; // 置零
                 writeCount++;
             }

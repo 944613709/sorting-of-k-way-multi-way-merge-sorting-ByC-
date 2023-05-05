@@ -90,7 +90,7 @@ Record **createRecordsTwoDim(int m) {
 }
 
 //败者树
-#define LEAF_NUM 18 //叶子结点数目
+#define LEAF_NUM 20 //叶子结点数目
 #define A_MAX 30000
 typedef int LoserTree[LEAF_NUM];     //败者树非终端结点(归并段下标)
 
