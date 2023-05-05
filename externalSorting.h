@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <queue>
 #include <vector>
+
 #define WAYS_NUM 20          // 定义归并排序的路数
 const char *path_input = "input_records.bin";  // 待排序文件名
 const char *path_output = "ouput_records.bin"; // 已排序文件名
@@ -213,20 +214,16 @@ void secondRun() {
             writeCount++;// 输出缓冲区输出的次数
         } else {
             // 输出缓冲区未满，但全部子集已排序比较完
-            int flag = 0;
-            // 判断是否所有子集都已经比较完
+            //是否仍有子集没有比较完
+            bool isNotAllHasCompared = false;
             for (auto &i: buffer_sorting) {
                 if (i.A <= A_MAX) {
-                    flag = 1;
+                    isNotAllHasCompared = true;
                     break;
                 }
             }
-            // 如果所有子集都已经比较完，但是输出缓冲区未满，则也得把最后剩余的量输出到外存
-            if (flag == 0) {
-                fwrite(buffer_output, sizeof(Record), outputNum, fw);
-                outputNum = 0; // 置零
-                writeCount++;
-            }//
+            // 如果所有子集都已经比较完，尽管输出缓冲区未满，则也得把最后剩余的量输出到外存
+            !isNotAllHasCompared ? (fwrite(buffer_output, sizeof(Record), outputNum, fw), outputNum = 0, writeCount++) : 0;
         }
     }
 }
