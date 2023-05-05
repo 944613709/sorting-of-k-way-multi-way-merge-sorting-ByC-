@@ -226,7 +226,7 @@ void secondRun() {
                 fwrite(buffer_output, sizeof(Record), outputNum, fw);
                 outputNum = 0; // ÷√¡„
                 writeCount++;
-            }
+            }//
         }
     }
 }
