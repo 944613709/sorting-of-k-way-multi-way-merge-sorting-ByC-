@@ -24,7 +24,7 @@ typedef struct record {
 
 
 /**
- * 在内存中生成随机Records，最大值为max_value，返回指向Records的指针
+ * 在内存中生成随机Records，数据的A最大值为a_max，返回指向Records的指针
  * @param num_records
  * @param a_max
  * @return
@@ -162,13 +162,10 @@ int getMinNotOptimized(Record *pRecord, int ways, int a_max) {
  * @param pRecord
  * @param ways
  * @param a_max
- * @return 最小值的索引(如果已经读取完全部元组, 返回-1)
+ * @return 最小值的索引
  */
 int getMinByLoserTree(LoserTree tree) {
     int min = tree[0];
-    if (min == A_MAX + 1) {
-        return -1;//已经读取完全部元组, 结束程序
-    }
     return min;
 }
 

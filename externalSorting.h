@@ -16,9 +16,22 @@
 
 #define WAYS_NUM 20          // 定义归并排序的路数
 const char *path_input = "input_records.bin";  // 待排序文件名
-const char *path_output = "ouput_records.bin"; // 已排序文件名
+const char *path_output = "output_records.bin"; // 已排序文件名
 FILE *subinput_fp[WAYS_NUM];  // 有序子文件指针
-int recordNums[WAYS_NUM];     // 每个子集中存储的记录数
+int subSetSize[WAYS_NUM];     // 每个子集中存储的记录数
+bool isEndNotOptimized(int minValue_index);
+
+bool isEndByLoserTree(const Record *buffer_sorting, int minValue_index);
+
+void sortSubSet();
+
+void divideSubSet();
+
+Record **initBufferInput();
+
+void mergeAndOutput(Record **pRecords_twoDim, int *buffer_waitNum, int *waitIndex, bool *isEnd, Record *buffer_sorting,
+                    Record *buffer_output, int outputNum, int writeCount, FILE *fw, int *tree);
+
 #define RECORDS_TOTAL_NUM 20000   // 定义记录总数
 #define A_MAX 30000     // 定义记录中A属性的最大值
 #define BUFFER_TOTAL_SIZE 1000      // 定义总缓冲区大小
@@ -59,16 +72,33 @@ int compareForRecord(const void *a, const void *b) {
 void firstRun() {
     //输出当前系统时间
     printf("当前运行时间：%fs----开始-第一趟排序\n\n", ((double) clock()) / CLK_TCK);
+    //在第一趟排序中，划分每个子集大小
+    divideSubSet();
+    // 读取子集数据并进行排序
+    sortSubSet();
 
+    //输出当前系统时间
+    printf("当前运行时间：%fs----完成-第一趟排序\n\n", ((double) clock()) / CLK_TCK);
+}
+
+/**
+ * 在第一趟排序中，划分每个子集大小
+ * 子集大小记录到subSetSize数组中
+ */
+void divideSubSet() {
     printf("一共划分的子集个数: %d", WAYS_NUM);
     for (int i = 0; i < WAYS_NUM; i++) {
         // 计算每个子集中存储的记录数大小
-        recordNums[i] =
+        subSetSize[i] =
                 i < RECORDS_TOTAL_NUM % WAYS_NUM ? RECORDS_TOTAL_NUM / WAYS_NUM + 1 : RECORDS_TOTAL_NUM / WAYS_NUM;
     }
     printf("\n");
+}
 
-    // 从输入中读取数据
+/**
+ * 在第一趟排序中，对于每个子集进行排序并且保存到文件中
+ */
+void sortSubSet() {// 从输入中读取数据
     FILE *fr;
     if ((fr = fopen(path_input, "rb")) == nullptr) {
         printf("Fail to open file: input!\n");
@@ -76,7 +106,7 @@ void firstRun() {
     }
     // 子数据排序并保存文件
     for (int i = 0; i < WAYS_NUM; i++) {
-        int n = recordNums[i];// 每个子集中存储的记录数
+        int n = subSetSize[i];// 每个子集中存储的记录数
         auto *pRecord = (Record *) malloc(n * sizeof(Record));
         if (pRecord == nullptr) {
             printf("Error: pRecord is NULL\n");
@@ -98,36 +128,17 @@ void firstRun() {
         fwrite(pRecord, sizeof(Record), n, subinput_fp[i]);
         free(pRecord);
         fclose(subinput_fp[i]);
-        std::cout << "第" << i << "个子集排序完成" << std::endl;
+        cout << "第" << i << "个子集排序完成" << endl;
     }
     fclose(fr);
-    //输出当前系统时间
-    printf("当前运行时间：%fs----完成-第一趟排序\n\n", ((double) clock()) / CLK_TCK);
 }
 
 
 // 这是第二趟排序
 void secondRun() {
     printf("当前运行时间：%fs----开始-第二趟排序\n\n", ((double) clock()) / CLK_TCK);
-    // 输入缓冲区
-    Record **pRecords_twoDim = createRecordsTwoDim(WAYS_NUM);
-    // 向ways个文件读数据
-    // 读取第一趟排序后的子集数据，每个子集都是去当前头部一部分元素，放入其对应的输入缓冲区
-    for (int i = 0; i < WAYS_NUM; i++) {
-        char subSet_name[20];
-        sprintf(subSet_name, "subSet_%d.bin", i);
-        subinput_fp[i] = fopen(subSet_name, "rb");
-        if (subinput_fp[i] == nullptr) {
-            printf("Fail to open subSet%c!\n", i);
-            exit(0);
-        }
-        pRecords_twoDim[i] = (Record *) malloc(sizeof(Record) * SUB_BUF_SIZE);
-        if (pRecords_twoDim[i] == nullptr) {
-            printf("Error: pRecords_twoDim[%d] is NULL\n", i);
-            exit(1);
-        }
-        fread(pRecords_twoDim[i], sizeof(Record), SUB_BUF_SIZE, subinput_fp[i]);
-    }
+    //初始化输入缓冲区
+    Record **pRecords_twoDim = initBufferInput();
 
     // 初始化缓冲区
     int buffer_waitNum[WAYS_NUM]; //
@@ -150,24 +161,45 @@ void secondRun() {
         printf("Fail to open file: buffer_output!\n");
         exit(0);
     }
+    LoserTree tree;
+    InitialTree(tree, buffer_sorting);
+    priority_queue<int> min_heap;
+    // 归并排序并且输出到文件中
+    mergeAndOutput(pRecords_twoDim, buffer_waitNum, waitIndex, isEnd, buffer_sorting, buffer_output, outputNum,
+                   writeCount, fw,
+                   tree);
+}
 
-    // 二路归并排序
+/**
+ * 归并排序并且输出到文件中
+ * @param pRecords_twoDim
+ * @param buffer_waitNum
+ * @param waitIndex
+ * @param isEnd
+ * @param buffer_sorting
+ * @param buffer_output
+ * @param outputNum
+ * @param writeCount
+ * @param fw
+ * @param tree
+ */
+void mergeAndOutput(Record **pRecords_twoDim, int *buffer_waitNum, int *waitIndex, bool *isEnd, Record *buffer_sorting,
+                    Record *buffer_output, int outputNum, int writeCount, FILE *fw, int *tree) {// 归并排序
     while (true) {
         //------未优化版本----------
-
-        int minValue_index = getMinNotOptimized(buffer_sorting, WAYS_NUM, A_MAX); // 当前最小元素所在的子集
+//        int minValue_index = getMinNotOptimized(buffer_sorting, WAYS_NUM, A_MAX); // 当前最小元素所在的子集
+//-------------------------------------
 
 //----------败者树优化版本-----------
-//        LoserTree tree;
-//        InitialTree(tree,buffer_sorting);
-//        int minValue_index = getMinByLoserTree(tree); // 当前最小元素所在的子集
+
+        int minValue_index = getMinByLoserTree(tree); // 当前最小元素所在的子集
 
 //------------最小堆优化版本-----
-//        priority_queue<int> min_heap;
+
 //        int minValue_index = getMinByHeap(min_heap); // 当前最小元素所在的子集
 //-----------------------------------
         // 如果所有排序结束
-        if (minValue_index == -1) {
+        if (isEndByLoserTree(buffer_sorting, minValue_index)) {
             printf("所有的records完成归并!\n");
             for (int i = 0; i < WAYS_NUM; i++) {
                 fclose(subinput_fp[i]);
@@ -182,7 +214,7 @@ void secondRun() {
         buffer_output[outputNum] = buffer_sorting[minValue_index]; // 把当前排序缓冲区的最小值放入输出缓冲区
         outputNum++;
         if (isEnd[minValue_index]) {
-            printf("第%d个子集已经读完\n", minValue_index);
+            printf("第%d个子集已经完成\n", minValue_index);
             buffer_sorting[minValue_index].A = A_MAX + 1;// 标记为已经输出
         } else {
             buffer_sorting[minValue_index] = pRecords_twoDim[minValue_index][waitIndex[minValue_index]];  // 第min个等待区++
@@ -204,7 +236,19 @@ void secondRun() {
                 waitIndex[minValue_index] = 0; // 正在等待的元素置零
             }
         }
-
+        //----------败者树优化版本-----------
+        Adjust(tree, minValue_index, buffer_sorting);
+        //-----------------------------------
+        //------------最小堆优化版本-----
+//        do{
+//            //do nothing
+//        }
+        //-----------------------------------
+        //---------未优化版本
+//        do{
+//            //do nothing
+//        }
+        //-----------------------------------
         // 判断是否输出数据到外存
         if (outputNum == OUTPUT_BUF_SIZE) {
             // 如果输出缓冲区已满，则输出到外存
@@ -213,19 +257,52 @@ void secondRun() {
             outputNum = 0; // 置零
             writeCount++;// 输出缓冲区输出的次数
         } else {
-            // 输出缓冲区未满，但全部子集已排序比较完
-            //是否仍有子集没有比较完
+                // 输出缓冲区未满，但全部子集已排序比较完
+                //是否仍有子集没有比较完
             bool isNotAllHasCompared = false;
-            for (auto &i: buffer_sorting) {
-                if (i.A <= A_MAX) {
+            for (int i = 0; i < WAYS_NUM; i++) {
+                if (buffer_sorting[i].A <= A_MAX) {
                     isNotAllHasCompared = true;
                     break;
                 }
             }
             // 如果所有子集都已经比较完，尽管输出缓冲区未满，则也得把最后剩余的量输出到外存
-            !isNotAllHasCompared ? (fwrite(buffer_output, sizeof(Record), outputNum, fw), outputNum = 0, writeCount++) : 0;
+            !isNotAllHasCompared ? (fwrite(buffer_output, sizeof(Record), outputNum, fw), outputNum = 0, writeCount++)
+                                 : 0;
         }
     }
 }
+
+/**
+ * 初始化输入缓冲区
+ * @return
+ */
+Record **initBufferInput() {// 输入缓冲区
+    Record **pRecords_twoDim = createRecordsTwoDim(WAYS_NUM);
+    // 向ways个文件读数据
+    // 读取第一趟排序后的子集数据，每个子集都是去当前头部一部分元素，放入其对应的输入缓冲区
+    for (int i = 0; i < WAYS_NUM; i++) {
+        char subSet_name[20];
+        sprintf(subSet_name, "subSet_%d.bin", i);
+        subinput_fp[i] = fopen(subSet_name, "rb");
+        if (subinput_fp[i] == nullptr) {
+            printf("Fail to open subSet%c!\n", i);
+            exit(0);
+        }
+        pRecords_twoDim[i] = (Record *) malloc(sizeof(Record) * SUB_BUF_SIZE);
+        if (pRecords_twoDim[i] == nullptr) {
+            printf("Error: pRecords_twoDim[%d] is NULL\n", i);
+            exit(1);
+        }
+        fread(pRecords_twoDim[i], sizeof(Record), SUB_BUF_SIZE, subinput_fp[i]);
+    }
+    return pRecords_twoDim;
+}
+
+bool isEndByLoserTree(const Record *buffer_sorting, int minValue_index) {
+    return buffer_sorting[minValue_index].A == A_MAX + 1;
+}
+
+bool isEndNotOptimized(int minValue_index) { return minValue_index == -1; }
 
 #endif

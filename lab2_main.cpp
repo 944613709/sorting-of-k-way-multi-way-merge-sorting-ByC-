@@ -3,7 +3,10 @@
 #include <iostream>
 #include <time.h>
 #include "externalSorting.h"
-
+/**
+ * Ö÷º¯Êý
+ * @return
+ */
 int main() {
     clock_t start = clock();
     generateRecords();
