@@ -1,6 +1,4 @@
 # hit-database-lab2
- hit-database-lab2
-
 哈工大数据库系统实验2-模拟外部排序
 
 # 说明
